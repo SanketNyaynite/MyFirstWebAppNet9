@@ -1,3 +1,6 @@
+using System.Text.Json;
+using static EmployeesRepository;
+
 var builder = WebApplication.CreateBuilder(args);       //sets up Kestrel server.
 /*  Between the above and below lines, we can configure the Kestrel server.
  * 
@@ -8,9 +11,10 @@ var builder = WebApplication.CreateBuilder(args);       //sets up Kestrel server
 var app = builder.Build();                              //generates the instance of web application.
 
 //Below is a Http request Run method that handles all HTTP requests.
-app.Run(async (HttpContext context) =>                 //corresponds to the middleware component and processes HTTP requests.Lamba function
+//Below corresponds to the middleware component and processes HTTP requests.Lamba function.
+app.Run(async (HttpContext context) =>                 
 {
-    if (context.Request.Method == "GET")                //purpose of GET methid is to retrieve data from the server.
+    if (context.Request.Method == "GET")                
     {
         if (context.Request.Path.StartsWithSegments("/"))
         {
@@ -39,13 +43,31 @@ app.Run(async (HttpContext context) =>                 //corresponds to the midd
             await context.Response.WriteAsync("404 Not Found");
         }
     }
+    else if (context.Request.Method == "POST")
+    {
+        if (context.Request.Path.StartsWithSegments("/employees"))
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            var body = await reader.ReadToEndAsync();
+            var employee = JsonSerializer.Deserialize<Employee>(body);
+
+            EmployeesRepository.AddEmployee(employee);
+
+        }
+        else
+        {
+            context.Response.StatusCode = 404;
+            await context.Response.WriteAsync("404 Not Found");
+        }
+    }
+    else
+    {
+        context.Response.StatusCode = 405; // Method Not Allowed
+        await context.Response.WriteAsync("405 Method Not Allowed");
+    }
 });
 
 app.Run();                                              //runs the web application as well as listens to kestrel server.
-
-
-    //WriteAsync is an asynchronous method that writes the specified string to the HTTP response body. So basically it is going to output data to response object and then when the reponse is sent to the browser, the browser is able to display that data.
-
 
 static class EmployeesRepository
 {
@@ -57,6 +79,13 @@ static class EmployeesRepository
     };
 
     public static List<Employee> GetAllEmployees() => employees;
+    public static void AddEmployee(Employee? employee)
+    {
+        if (employee is not null) 
+        {
+            employees.Add(employee);
+        }
+    }
 }
 public class Employee
 {
@@ -73,3 +102,12 @@ public class Employee
         Salary = salary;
     }
 }
+
+
+/*
+ * WriteAsync is an asynchronous method that writes the specified string to the HTTP response body. So basically it is going to output data to response object and then when the reponse is sent to the browser, the browser is able to display that data.
+ * 
+ * The purpose of GET methid is to retrieve data from the server.
+ * The purpose of Http Post method is to create new resource on the server.
+ */
+
