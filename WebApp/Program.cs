@@ -16,7 +16,7 @@ var app = builder.Build();
 //Below corresponds to the middleware component and processes HTTP requests.Lamba function.
 app.Run(async (HttpContext context) =>                 
 {
-    if (context.Request.Method == "GET")                
+    if (context.Request.Method == "GET")
     {
         if (context.Request.Path.StartsWithSegments("/"))
         {
@@ -81,7 +81,39 @@ app.Run(async (HttpContext context) =>
             }
         }
     }
-});
+    else if (context.Request.Method == "DELETE")
+    {
+        if (context.Request.Path.StartsWithSegments("/employees"))
+        {
+            if (context.Request.Query.ContainsKey("id"))
+            {
+                var id = context.Request.Query["id"];
+                if (int.TryParse(id, out int employeeId))
+                {
+                    var result = EmployeesRepository.DeleteEmployee(employeeId);
+
+                    if (result)
+                    {
+                        await context.Response.WriteAsync("Employee is deleted successfully.");
+                    }
+                    else
+                    {
+                        await context.Response.WriteAsync("Employee not found.");
+                    }
+
+                }
+                
+            }
+            
+        }
+    }
+
+        //Below code is used to read query strings from the URL.
+        //foreach (var key in context.Request.Query.Keys)
+        //{
+        //    await context.Response.WriteAsync($"{key}: {context.Request.Query[key]}\r\n");
+        //}
+    });
 //runs the web application as well as listens to kestrel server.
 app.Run();                                              
 
@@ -118,6 +150,17 @@ static class EmployeesRepository
         }
         return false;
     }
+
+    public static Boolean DeleteEmployee(int id)
+    {
+        var emp = employees.FirstOrDefault(x => x.Id == id);
+        if (emp != null)
+        {
+            employees.Remove(emp);
+            return true;
+        }
+        return false;
+    }
 }
 public class Employee
 {
@@ -142,5 +185,6 @@ public class Employee
  * The purpose of GET method is to retrieve data from the server.
  * The purpose of Http Post method is to create new resource on the server.
  * The purpose of Http Put methid is to update existing resources on the server.
+ * The purpose of Http Delete method is to delete existing resources on the server.
  */
 
