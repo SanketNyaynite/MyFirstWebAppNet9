@@ -16,22 +16,22 @@ var app = builder.Build();
 //Below corresponds to the middleware component and processes HTTP requests.Lamba function.
 app.Run(async (HttpContext context) =>                 
 {
-    if (context.Request.Method == "GET")
+    if (context.Request.Path.StartsWithSegments("/"))
     {
-        if (context.Request.Path.StartsWithSegments("/"))
-        {
-            await context.Response.WriteAsync($"The method is: {context.Request.Method}\r\n");
-            await context.Response.WriteAsync($"The url is: {context.Request.Path}\r\n");
+        await context.Response.WriteAsync($"The method is: {context.Request.Method}\r\n");
+        await context.Response.WriteAsync($"The url is: {context.Request.Path}\r\n");
 
-            await context.Response.WriteAsync($"\r\nHeaders:\r\n");
-            foreach (var key in context.Request.Headers.Keys)
-            {
-                await context.Response.WriteAsync($"{key}: {context.Request.Headers[key]}\r\n");
-            }
-        }
-        else if (context.Request.Path.StartsWithSegments("/employees"))
+        await context.Response.WriteAsync($"\r\nHeaders:\r\n");
+        foreach (var key in context.Request.Headers.Keys)
         {
-            //await context.Response.WriteAsync("Employee List");
+            await context.Response.WriteAsync($"{key}: {context.Request.Headers[key]}\r\n");
+        }
+    }
+    else if (context.Request.Path.StartsWithSegments("/employees"))
+    {
+        if (context.Request.Method == "GET")
+        {
+            //keyboard shortcut press k+f to format the code in visual studio.
             var employees = EmployeesRepository.GetAllEmployees();
 
             foreach (var employee in employees)
@@ -39,32 +39,15 @@ app.Run(async (HttpContext context) =>
                 await context.Response.WriteAsync($"{employee.Name}: {employee.Position}\r\n");
             }
         }
-        else
-        {
-            context.Response.StatusCode = 404;
-            await context.Response.WriteAsync("404 Not Found");
-        }
-    }
-    else if (context.Request.Method == "POST")
-    {
-        if (context.Request.Path.StartsWithSegments("/employees"))
+        else if (context.Request.Method == "POST")
         {
             using var reader = new StreamReader(context.Request.Body);
             var body = await reader.ReadToEndAsync();
             var employee = JsonSerializer.Deserialize<Employee>(body);
 
             EmployeesRepository.AddEmployee(employee);
-
         }
-        else
-        {
-            context.Response.StatusCode = 404;
-            await context.Response.WriteAsync("404 Not Found");
-        }
-    }
-    else if (context.Request.Method == "PUT")
-    {
-        if (context.Request.Path.StartsWithSegments("/employees"))
+        else if (context.Request.Method == "PUT")
         {
             using var reader = new StreamReader(context.Request.Body);
             var body = await reader.ReadToEndAsync();
@@ -80,10 +63,7 @@ app.Run(async (HttpContext context) =>
                 await context.Response.WriteAsync("Employee not found.");
             }
         }
-    }
-    else if (context.Request.Method == "DELETE")
-    {
-        if (context.Request.Path.StartsWithSegments("/employees"))
+        else if (context.Request.Method == "DELETE")
         {
             if (context.Request.Query.ContainsKey("id"))
             {
@@ -105,13 +85,11 @@ app.Run(async (HttpContext context) =>
                     }
                     else
                     {
-
                         await context.Response.WriteAsync("You are not authorized to delete.");
 
                     }
                 }
             }
-            
         }
     }
 
