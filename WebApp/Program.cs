@@ -90,19 +90,26 @@ app.Run(async (HttpContext context) =>
                 var id = context.Request.Query["id"];
                 if (int.TryParse(id, out int employeeId))
                 {
-                    var result = EmployeesRepository.DeleteEmployee(employeeId);
-
-                    if (result)
+                    if (context.Request.Headers["Authorization"] == "ethan")
                     {
-                        await context.Response.WriteAsync("Employee is deleted successfully.");
+                        var result = EmployeesRepository.DeleteEmployee(employeeId);
+
+                        if (result)
+                        {
+                            await context.Response.WriteAsync("Employee is deleted successfully.");
+                        }
+                        else
+                        {
+                            await context.Response.WriteAsync("Employee not found.");
+                        }
                     }
                     else
                     {
-                        await context.Response.WriteAsync("Employee not found.");
-                    }
 
+                        await context.Response.WriteAsync("You are not authorized to delete.");
+
+                    }
                 }
-                
             }
             
         }
@@ -186,5 +193,6 @@ public class Employee
  * The purpose of Http Post method is to create new resource on the server.
  * The purpose of Http Put methid is to update existing resources on the server.
  * The purpose of Http Delete method is to delete existing resources on the server.
+ * The purpose of Http Request Headers is to provide additional information about the request or the client itself to the server.
  */
 
