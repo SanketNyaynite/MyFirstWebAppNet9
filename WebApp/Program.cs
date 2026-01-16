@@ -38,13 +38,38 @@ app.Run(async (HttpContext context) =>
 
         if (context.Request.Method == "GET")
         {
-            //keyboard shortcut press k+f to format the code in visual studio.
-            var employees = EmployeesRepository.GetAllEmployees();
+            if (context.Request.Query.ContainsKey("id"))
+            {
+                var id = context.Request.Query["id"];
+                if (int.TryParse(id, out int employeeId))
+                {
+                    var employee = EmployeesRepository.GetAllEmployeesById(employeeId);
+                    context.Response.ContentType = "text/html";
 
-            foreach (var employee in employees)
-            {          
-                await context.Response.WriteAsync($"{employee.Name}: {employee.Position}\r\n");
-            }           
+                    if (employee != null)
+                    {
+                        await context.Response.WriteAsync($"Name: {employee.Name}<br/>");
+                        await context.Response.WriteAsync($"Position: {employee.Position}<br/>");
+                        await context.Response.WriteAsync($"Salary: {employee.Salary}<br/>");
+                    }
+                    else
+                    {
+                        context.Response.StatusCode = 404; // Not Found
+                        await context.Response.WriteAsync("Employee not found.");
+                    }
+
+                }
+            }
+            else
+            {
+                var employees = EmployeesRepository.GetAllEmployees();
+
+                foreach (var employee in employees)
+                {
+                    await context.Response.WriteAsync($"{employee.Name}: {employee.Position}\r\n");
+                }
+            }
+            
         }
         else if (context.Request.Method == "POST")
         {
@@ -73,7 +98,7 @@ app.Run(async (HttpContext context) =>
             }
 
 
-            
+
         }
         else if (context.Request.Method == "PUT")
         {
@@ -146,6 +171,11 @@ static class EmployeesRepository
     };
 
     public static List<Employee> GetAllEmployees() => employees;
+    public static Employee? GetAllEmployeesById(int id)
+    {
+        return employees.FirstOrDefault(x => x.Id == id);
+    }
+
     public static void AddEmployee(Employee? employee)
     {
         if (employee is not null) 
@@ -209,5 +239,6 @@ public class Employee
  * The purpose of Http Delete method is to delete existing resources on the server.
  * The purpose of Http Request Headers is to provide additional information about the request or the client itself to the server.
  * The purpose of the Http Response Headers is to provide additional information about how to render the response on the browser.
+ * 
  */
 
