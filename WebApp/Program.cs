@@ -16,36 +16,64 @@ var app = builder.Build();
 //Below corresponds to the middleware component and processes HTTP requests.Lamba function.
 app.Run(async (HttpContext context) =>                 
 {
+
     if (context.Request.Path.StartsWithSegments("/"))
     {
-        await context.Response.WriteAsync($"The method is: {context.Request.Method}\r\n");
-        await context.Response.WriteAsync($"The url is: {context.Request.Path}\r\n");
+        context.Response.Headers["Content-Type"] = "text/html";
+        await context.Response.WriteAsync($"The method is: {context.Request.Method}<br/>");
+        await context.Response.WriteAsync($"The url is: {context.Request.Path}<br/>");
 
-        await context.Response.WriteAsync($"\r\nHeaders:\r\n");
+        await context.Response.WriteAsync($"<b>Headers</b>:<br/>");
+
+        await context.Response.WriteAsync($"<ul>");
         foreach (var key in context.Request.Headers.Keys)
         {
-            await context.Response.WriteAsync($"{key}: {context.Request.Headers[key]}\r\n");
+            await context.Response.WriteAsync($"<li><b>{key}</b>: {context.Request.Headers[key]}</li>");
         }
+        await context.Response.WriteAsync($"</ul>");
     }
     else if (context.Request.Path.StartsWithSegments("/employees"))
     {
+        //throw new Exception("Some error occurred in /employees endpoint.");
+
         if (context.Request.Method == "GET")
         {
             //keyboard shortcut press k+f to format the code in visual studio.
             var employees = EmployeesRepository.GetAllEmployees();
 
             foreach (var employee in employees)
-            {
+            {          
                 await context.Response.WriteAsync($"{employee.Name}: {employee.Position}\r\n");
-            }
+            }           
         }
         else if (context.Request.Method == "POST")
         {
             using var reader = new StreamReader(context.Request.Body);
             var body = await reader.ReadToEndAsync();
-            var employee = JsonSerializer.Deserialize<Employee>(body);
 
-            EmployeesRepository.AddEmployee(employee);
+            try
+            {
+                var employee = JsonSerializer.Deserialize<Employee>(body);
+                if (employee is null || employee.Id <= 0)
+                {
+                    context.Response.StatusCode = 400; // Bad Request
+                    return;
+                }
+
+                EmployeesRepository.AddEmployee(employee);
+
+                context.Response.StatusCode = 201; // Created
+                await context.Response.WriteAsync("Employee added successfully.");
+            }
+            catch (Exception ex)
+            {
+                context.Response.StatusCode = 400; // Bad Request
+                await context.Response.WriteAsync(ex.ToString());
+                return;
+            }
+
+
+            
         }
         else if (context.Request.Method == "PUT")
         {
@@ -56,12 +84,14 @@ app.Run(async (HttpContext context) =>
             var result = EmployeesRepository.UpdateEmployee(employee);
             if (result)
             {
+                context.Response.StatusCode = 204;
                 await context.Response.WriteAsync("Employee updated successfully.");
             }
             else
             {
                 await context.Response.WriteAsync("Employee not found.");
             }
+
         }
         else if (context.Request.Method == "DELETE")
         {
@@ -80,25 +110,29 @@ app.Run(async (HttpContext context) =>
                         }
                         else
                         {
+                            context.Response.StatusCode = 404;
                             await context.Response.WriteAsync("Employee not found.");
                         }
                     }
                     else
                     {
+                        context.Response.StatusCode = 401;
                         await context.Response.WriteAsync("You are not authorized to delete.");
-
                     }
                 }
             }
         }
     }
-
-        //Below code is used to read query strings from the URL.
-        //foreach (var key in context.Request.Query.Keys)
-        //{
-        //    await context.Response.WriteAsync($"{key}: {context.Request.Query[key]}\r\n");
-        //}
-    });
+    else
+    {
+        context.Response.StatusCode = 404; // Not Found
+    }
+    //Below code is used to read query strings from the URL.
+    //    foreach (var key in context.Request.Query.Keys)
+    //{
+    //    await context.Response.WriteAsync($"{key}: {context.Request.Query[key]}\r\n");
+    //}
+});
 //runs the web application as well as listens to kestrel server.
 app.Run();                                              
 
@@ -165,6 +199,8 @@ public class Employee
 
 
 /*
+ * HttpMethod URL Version is the syntax of Http Request.
+ * Version StatusCode StatusDescription is the syntax of Http Response.
  * WriteAsync is an asynchronous method that writes the specified string to the HTTP response body. So basically it is going to output data to response object and then when the reponse is sent to the browser, the browser is able to display that data.
  * 
  * The purpose of GET method is to retrieve data from the server.
@@ -172,5 +208,6 @@ public class Employee
  * The purpose of Http Put methid is to update existing resources on the server.
  * The purpose of Http Delete method is to delete existing resources on the server.
  * The purpose of Http Request Headers is to provide additional information about the request or the client itself to the server.
+ * The purpose of the Http Response Headers is to provide additional information about how to render the response on the browser.
  */
 
